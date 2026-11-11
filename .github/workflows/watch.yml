@@ -1,0 +1,44 @@
+name: Watch Zoox internships
+
+on:
+  schedule:
+    # Hourly through US Pacific working hours on weekdays (6 AM to 8 PM PT), every 6 hours otherwise. Times are UTC.
+    - cron: "17 13-23 * * 1-5"
+    - cron: "17 0-3 * * 2-6"
+    - cron: "47 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Open a test notification issue"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: zoox-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Zoox postings
+        run: python3 watch.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NOTIFY: shaunak1206
+          TEST: ${{ inputs.test }}
+      - name: Save seen postings
+        run: |
+          if ! git diff --quiet -- seen.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update seen Zoox postings" -- seen.json
+            git push
+          fi
